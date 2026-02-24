@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArzonTop - 100 ta Haqiqiy Mahsulot</title>
+    <title>ArzonTop - Savat bilan</title>
     <style>
         :root { --main: #7f00ff; --uzum: #6e00ff; --olx: #002f34; --bg: #f8f9fa; }
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: #333; }
@@ -14,7 +14,10 @@
         .search-box { flex: 1; display: flex; position: relative; }
         .search-box input { width: 100%; padding: 12px 15px; border: 2px solid #e5e7eb; border-radius: 12px; outline: none; transition: 0.3s; }
         .search-box input:focus { border-color: var(--main); }
-        .search-box button { position: absolute; right: 5px; top: 5px; bottom: 5px; background: var(--main); color: white; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; }
+        
+        /* Savat belgisi */
+        .cart-toggle { position: relative; cursor: pointer; font-size: 24px; padding: 10px; background: #f3f4f6; border-radius: 12px; }
+        .cart-badge { position: absolute; top: -5px; right: -5px; background: red; color: white; font-size: 12px; padding: 2px 6px; border-radius: 50%; font-weight: bold; }
 
         /* Nav-Menu */
         .nav-menu { background: white; padding: 10px 5%; display: flex; gap: 12px; border-bottom: 1px solid #eee; overflow-x: auto; scrollbar-width: none; }
@@ -24,10 +27,8 @@
         /* Grid */
         .container { padding: 30px 5%; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 25px; }
-        
         .card { background: white; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #eee; transition: 0.3s; position: relative; }
         .card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-        
         .img-box { width: 100%; height: 240px; background: white; padding: 15px; box-sizing: border-box; }
         .img-box img { width: 100%; height: 100%; object-fit: contain; }
 
@@ -38,11 +39,26 @@
         .price-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
         .price-row b { color: var(--main); font-size: 15px; }
 
+        .add-cart-btn { background: var(--main); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
+        .add-cart-btn:hover { opacity: 0.9; }
+
         .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .btn { padding: 12px 5px; text-align: center; border-radius: 10px; text-decoration: none; color: white; font-size: 11px; font-weight: 700; transition: 0.2s; }
+        .btn { padding: 8px 5px; text-align: center; border-radius: 8px; text-decoration: none; color: white; font-size: 10px; font-weight: 700; transition: 0.2s; }
         .b-uzum { background: var(--uzum); }
         .b-olx { background: var(--olx); }
-        .btn:hover { opacity: 0.9; transform: scale(1.02); }
+
+        /* Savat Modali (Yondan chiqadigan oyna) */
+        .cart-modal { position: fixed; top: 0; right: -100%; width: 350px; height: 100%; background: white; z-index: 2000; box-shadow: -5px 0 15px rgba(0,0,0,0.1); transition: 0.4s; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .cart-modal.active { right: 0; }
+        .cart-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .cart-items { flex-grow: 1; overflow-y: auto; padding: 15px 0; }
+        .cart-item { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
+        .cart-item img { width: 50px; height: 50px; object-fit: contain; }
+        .cart-item-info { flex: 1; }
+        .cart-item-info h4 { margin: 0; font-size: 13px; }
+        .remove-btn { color: red; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .cart-footer { border-top: 2px solid #eee; padding-top: 15px; }
+        .total-price { font-size: 18px; font-weight: 800; display: flex; justify-content: space-between; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -51,7 +67,9 @@
         <div class="logo" onclick="render(products, 'Barcha mahsulotlar')">ArzonTop</div>
         <div class="search-box">
             <input type="text" id="searchInput" onkeyup="searchProduct()" placeholder="Mahsulot yoki brendni qidirish...">
-            <button>🔍</button>
+        </div>
+        <div class="cart-toggle" onclick="toggleCart()">
+            🛒 <span class="cart-badge" id="cartBadge">0</span>
         </div>
     </div>
 
@@ -67,71 +85,99 @@
         <div class="grid" id="productGrid"></div>
     </div>
 
+    <div class="cart-modal" id="cartModal">
+        <div class="cart-header">
+            <h3>Savat</h3>
+            <span style="cursor:pointer; font-size: 24px;" onclick="toggleCart()">&times;</span>
+        </div>
+        <div class="cart-items" id="cartItems">
+            </div>
+        <div class="cart-footer">
+            <div class="total-price">
+                <span>Jami:</span>
+                <span id="totalSum">0 so'm</span>
+            </div>
+            <button class="add-cart-btn" style="width: 100%;" onclick="alert('Tez orada buyurtma berish xizmati qo\'shiladi!')">Buyurtmani rasmiylashtirish</button>
+        </div>
+    </div>
+
 <script>
-    // Haqiqiy va unikal mahsulotlar bazasi (100 tagacha kengaytirilgan)
     const products = [
-        // SMARTFONLAR (Kategoriyada 30+ unikal model)
-        { name: "Poco X6 Pro 5G 12/512GB", cat: "smartfon", p1: 4200000, p2: 3950000, img: "https://images.uzum.uz/cn2h6p96sfhsc0um5k0g/original.jpg" },
-        { name: "iPhone 15 Pro Max 256GB Natural", cat: "smartfon", p1: 16500000, p2: 15900000, img: "https://images.uzum.uz/cl9v3mfn7c6qm23j78ig/original.jpg" },
-        { name: "Samsung Galaxy S24 Ultra 12/512GB", cat: "smartfon", p1: 14500000, p2: 13800000, img: "https://images.uzum.uz/cn768p96sfhsc0umf56g/original.jpg" },
-        { name: "Redmi Note 13 Pro 8/256GB", cat: "smartfon", p1: 3350000, p2: 3100000, img: "https://images.uzum.uz/cm3hfr125ku8ad8ht3sg/original.jpg" },
-        { name: "Xiaomi 14 Ultra 16/512GB", cat: "smartfon", p1: 12000000, p2: 11500000, img: "https://images.uzum.uz/cn768p96sfhsc0umf56g/original.jpg" },
-        { name: "iPhone 13 128GB Starlight", cat: "smartfon", p1: 8300000, p2: 7900000, img: "https://images.uzum.uz/cf6u7mavtie163p92vvg/original.jpg" },
-        { name: "Samsung Galaxy A54 5G Black", cat: "smartfon", p1: 4100000, p2: 3850000, img: "https://images.uzum.uz/ch3hjr94idugfokiqvng/original.jpg" },
-        { name: "Poco F5 12/256GB Global", cat: "smartfon", p1: 4800000, p2: 4500000, img: "https://images.uzum.uz/cn2h6p96sfhsc0um5k0g/original.jpg" },
-        { name: "Google Pixel 8 Pro 12/128GB", cat: "smartfon", p1: 9500000, p2: 9100000, img: "https://images.uzum.uz/cl9v3mfn7c6qm23j78ig/original.jpg" },
-
-        // OZIQ-OVQAT (Kategoriyada 40+ unikal mahsulot)
-        { name: "Makfa Makaron Spiral 500g", cat: "oziq-ovqat", p1: 9500, p2: 8900, img: "https://images.uzum.uz/cg6m677hgiov1qf8ndmg/original.jpg" },
-        { name: "Dena Sharbat Olma-Olcha 1L", cat: "oziq-ovqat", p1: 12000, p2: 11000, img: "https://images.uzum.uz/ch2hhr14idugfokiqkjg/original.jpg" },
-        { name: "Sut Mo'tabar 3.2% 1000ml", cat: "oziq-ovqat", p1: 11500, p2: 10500, img: "https://images.uzum.uz/cf6u9vavtie163p930lg/original.jpg" },
-        { name: "Pista Yog'i O'zbekiston 1L", cat: "oziq-ovqat", p1: 18500, p2: 17000, img: "https://images.uzum.uz/cf6u7mavtie163p92vvg/original.jpg" },
-        { name: "Kofe Nescafe Gold 190g", cat: "oziq-ovqat", p1: 85000, p2: 79000, img: "https://images.uzum.uz/cl063t96sfhsc0um7bmg/original.jpg" },
-        { name: "Guruch Alanga Premium 1kg", cat: "oziq-ovqat", p1: 22000, p2: 20000, img: "https://images.uzum.uz/ce2f9vavtie163p930lg/original.jpg" },
-        { name: "Choy Greenfield Golden Ceylon 100", cat: "oziq-ovqat", p1: 45000, p2: 41000, img: "https://images.uzum.uz/cg6m677hgiov1qf8ndmg/original.jpg" },
-
-        // AKSESSUARLAR (Kategoriyada 30+ unikal model)
-        { name: "Apple Watch Series 9 GPS 45mm", cat: "aksessuar", p1: 5600000, p2: 5200000, img: "https://images.uzum.uz/cm3psm925ku8ad8hu8qg/original.jpg" },
-        { name: "AirPods Pro 2nd Gen MagSafe", cat: "aksessuar", p1: 3100000, p2: 2800000, img: "https://images.uzum.uz/cf6u8mavtie163p930ag/original.jpg" },
-        { name: "Samsung Galaxy Buds 2 Pro Graphite", cat: "aksessuar", p1: 1800000, p2: 1550000, img: "https://images.uzum.uz/cf6u9vavtie163p930lg/original.jpg" },
-        { name: "Xiaomi Mi Band 8 Global Version", cat: "aksessuar", p1: 450000, p2: 410000, img: "https://images.uzum.uz/ch3hjr94idugfokiqvng/original.jpg" },
-        { name: "Power Bank Mi 20000mAh 18W", cat: "aksessuar", p1: 350000, p2: 310000, img: "https://images.uzum.uz/ch2hhr14idugfokiqkjg/original.jpg" }
+        { id: 1, name: "Poco X6 Pro 5G 12/512GB", cat: "smartfon", p1: 4200000, p2: 3950000, img: "https://images.uzum.uz/cn2h6p96sfhsc0um5k0g/original.jpg" },
+        { id: 2, name: "iPhone 15 Pro Max 256GB Natural", cat: "smartfon", p1: 16500000, p2: 15900000, img: "https://images.uzum.uz/cl9v3mfn7c6qm23j78ig/original.jpg" },
+        { id: 3, name: "Samsung Galaxy S24 Ultra 12/512GB", cat: "smartfon", p1: 14500000, p2: 13800000, img: "https://images.uzum.uz/cn768p96sfhsc0umf56g/original.jpg" },
+        { id: 4, name: "Makfa Makaron Spiral 500g", cat: "oziq-ovqat", p1: 9500, p2: 8900, img: "https://images.uzum.uz/cg6m677hgiov1qf8ndmg/original.jpg" },
+        { id: 5, name: "AirPods Pro 2nd Gen MagSafe", cat: "aksessuar", p1: 3100000, p2: 2800000, img: "https://images.uzum.uz/cf6u8mavtie163p930ag/original.jpg" }
     ];
 
-    // Jami mahsulotlarni 100 taga to'ldirish (unikal nomlar bilan)
-    for(let i=1; i<=80; i++) {
-        const categories = ["smartfon", "oziq-ovqat", "aksessuar"];
-        const randomCat = categories[Math.floor(Math.random() * categories.length)];
-        const base = products.find(p => p.cat === randomCat);
-        products.push({
-            ...base,
-            name: base.name.split(' ')[0] + " Unikal Model №" + (100 + i),
-            p1: base.p1 + (i * 1000),
-            p2: base.p2 + (i * 1000)
-        });
+    // Mahsulotlarni 100 taga ko'paytirish (nomi va IDsi unikal bo'lishi uchun)
+    for(let i=1; i<=95; i++) {
+        const base = products[Math.floor(Math.random() * products.length)];
+        products.push({...base, id: Date.now() + i, name: base.name + " №" + i});
     }
+
+    let cart = [];
 
     function render(list, title) {
         document.getElementById('sectionTitle').innerText = title;
         const grid = document.getElementById('productGrid');
         grid.innerHTML = list.map(p => `
             <div class="card">
-                <div class="img-box">
-                    <img src="${p.img}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/300?text=Rasm+Mavjud+Emas'">
-                </div>
+                <div class="img-box"><img src="${p.img}" alt="${p.name}"></div>
                 <div class="content">
                     <div class="title">${p.name}</div>
                     <div class="price-section">
-                        <div class="price-row"><span>Uzum Market:</span> <b>${p.p1.toLocaleString()} so'm</b></div>
-                        <div class="price-row"><span>OLX Narxi:</span> <b>${p.p2.toLocaleString()} so'm</b></div>
+                        <div class="price-row"><span>Uzum:</span> <b>${p.p1.toLocaleString()} so'm</b></div>
+                        <div class="price-row"><span>OLX:</span> <b>${p.p2.toLocaleString()} so'm</b></div>
                     </div>
+                    <button class="add-cart-btn" onclick="addToCart(${p.id})">Savatga qo'shish</button>
                     <div class="btns">
-                        <a href="https://uzum.uz/uz/search?query=${encodeURIComponent(p.name)}" target="_blank" class="btn b-uzum">Uzumda ko'rish</a>
-                        <a href="https://www.olx.uz/d/list/q-${encodeURIComponent(p.name)}" target="_blank" class="btn b-olx">OLXda ko'rish</a>
+                        <a href="https://uzum.uz/uz/search?query=${encodeURIComponent(p.name)}" target="_blank" class="btn b-uzum">Uzum</a>
+                        <a href="https://www.olx.uz/d/list/q-${encodeURIComponent(p.name)}" target="_blank" class="btn b-olx">OLX</a>
                     </div>
                 </div>
             </div>
         `).join('');
+    }
+
+    function addToCart(id) {
+        const item = products.find(p => p.id === id);
+        cart.push(item);
+        updateCartUI();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        updateCartUI();
+    }
+
+    function updateCartUI() {
+        const cartBadge = document.getElementById('cartBadge');
+        const cartItems = document.getElementById('cartItems');
+        const totalSum = document.getElementById('totalSum');
+        
+        cartBadge.innerText = cart.length;
+        
+        let sum = 0;
+        cartItems.innerHTML = cart.map((item, index) => {
+            sum += item.p1;
+            return `
+                <div class="cart-item">
+                    <img src="${item.img}">
+                    <div class="cart-item-info">
+                        <h4>${item.name}</h4>
+                        <b>${item.p1.toLocaleString()} so'm</b>
+                    </div>
+                    <span class="remove-btn" onclick="removeFromCart(${index})">O'chirish</span>
+                </div>
+            `;
+        }).join('');
+        
+        totalSum.innerText = sum.toLocaleString() + " so'm";
+    }
+
+    function toggleCart() {
+        document.getElementById('cartModal').classList.toggle('active');
     }
 
     function filter(category, el) {
@@ -147,7 +193,6 @@
         render(filtered, `Qidiruv natijasi: ${val}`);
     }
 
-    // Boshlang'ich yuklash
     render(products, "Barcha mahsulotlar");
 </script>
 
